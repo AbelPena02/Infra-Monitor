@@ -1,63 +1,68 @@
-Infra Monitor & Lifecycle Simulator
+## Infra Monitor & Lifecycle Simulator ##
 
 ### Description ###
 
 Infra Monitor & Lifecycle Simulator is a server infrastructure simulation and monitoring system. It allows you to:
 
 1.-Simulate multiple servers with CPU, memory, and state metrics.
+
 2.-Log and store requests and events in PostgreSQL.
+
 3.-Expose metrics to Prometheus for monitoring.
+
 4.-Visualize dashboards and alerts in Grafana.
+
 5.-Manage the full server lifecycle: BOOTING → RUNNING → FAILED → REBOOTING.
 
 Designed for local and cloud environments (AWS EC2, Docker) with CI/CD for automated deployments.
 
-### Architecture ###
-┌─────────────┐      ┌───────────────┐
-│   Clients   │ ---> │   Flask API   │
-└─────────────┘      │   (app.py)    │
-                     │   Servers.py  │
-                     │   DB.py       │
-                     └─────┬─────────┘
-                           │
-                           ▼
-                     ┌──────────────┐
-                     │ PostgreSQL   │
-                     │ infra_monitor│
-                     └─────┬────────┘
-                           │
-                           ▼
-┌─────────────┐       ┌───────────────┐       ┌─────────────┐
-│ Prometheus  │ <---- │ Flask Metrics │ ----> │ Grafana     │
-└─────────────┘       └───────────────┘       └─────────────┘
 
+### Architecture ###
 
 1.-Flask API (app.py): /, /servers, /health, /metrics.
+
 2.-DB (db.py): PostgreSQL connection.
+
 3.-Servers (servers.py): server simulation (CPU, memory, state).
+
 4.-Prometheus: scrape /metrics.
+
 5.-Grafana: dashboards and alerts.
+
 6.-Docker / Docker Compose: local stack orchestration.
+
 7.-CI/CD: GitHub Actions for tests and deployments.
 
+
 ### Technologies ###
-Component	    Technology/Version
-Backend	        Python 3.13, Flask 2.3.4
-Database	    PostgreSQL 15
-Monitoring	    Prometheus 2.x, Grafana 10.x
-Containers	    Docker 28.3.3, Docker Compose 1.29+
-CI/CD	        GitHub Actions
-Logging	        Python logging, app.log
+Component - Technology/Version
+
+Backend - Python 3.13, Flask 2.3.4
+
+Database - PostgreSQL 15
+
+Monitoring - Prometheus 2.x, Grafana 10.x
+
+Containers - Docker 28.3.3, Docker Compose 1.29+
+
+CI/CD - GitHub Actions
+
+Logging - Python logging, app.log
 
 
 ### Installation ###
 Requirements
 
 Python 3.13+
+
 Docker & Docker Compose
+
 PostgreSQL (or Dockerized)
+
 Prometheus
+
 Grafana
+
 Homebrew (optional for Mac services)
 
 Clone repository
@@ -72,49 +77,53 @@ pip install -r requirements.txt
 ### Running Locally ###
 Using Flask and local services
 
-# Activate environment
+## Activate environment
 source venv/bin/activate
 
-# Start Flask API
+## Start Flask API
 python app.py
 
-# Start Prometheus
+## Start Prometheus
 prometheus --config.file=prometheus.yml
 
-# Start Grafana (Mac)
+## Start Grafana (Mac)
 brew services start grafana
 
-# Start PostgreSQL (Mac)
+## Start PostgreSQL (Mac)
 brew services start postgresql
 
 Using Docker Compose
 
-# Build containers
+## Build containers
 docker-compose build
 
-# Start stack
+## Start stack
 docker-compose up
 
 Stop services
-# Stop Flask
-# Ctrl + C in terminal
+## Stop Flask
+Ctrl + C in terminal
 
-# Stop Prometheus
-# Ctrl + C in terminal
+## Stop Prometheus
+Ctrl + C in terminal
 
-# Stop Grafana and PostgreSQL
+## Stop Grafana and PostgreSQL
 brew services stop grafana
 brew services stop postgresql
 
-# Using Docker
+## Using Docker
 docker-compose down
 
 ### Endpoints ###
-Endpoint	    Method	    Description
-/	            GET	        Home, inserts a request log
-/servers	    GET	        Returns simulated servers
-/health	        GET	        API and DB status
-/metrics	    GET	    Prometheus metrics (CPU, memory, state, requests, latency)
+Endpoint - Method - Description
+
+/ -     GET     -Home, inserts a request log
+
+/servers -     GET     -Returns simulated servers
+
+/health -     GET     -API and DB status
+
+/metrics -     GET     - Prometheus metrics (CPU, memory, state, requests, latency)
 
 
 ### Prometheus Metrics ###
@@ -131,7 +140,7 @@ Memory per server: server_memory_usage
 
 Server state: server_state (0=FAILED,1=RUNNING,2=BOOTING)
 
-### rafana Dashboards ###
+### Drafana Dashboards ###
 
 Recommended panels:
 
@@ -171,3 +180,4 @@ Build Docker image
 Push to DockerHub (optional)
 
 Automatic deploy to EC2 (optional)
+
