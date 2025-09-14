@@ -1,0 +1,4 @@
+Flask==2.3.4
+Flask_SQLAlchemy==3.0.5
+psycopg2-binary==2.9.10
+prometheus_client==0.22.1
