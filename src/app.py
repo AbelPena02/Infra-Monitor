@@ -65,6 +65,9 @@ server_state = Gauge(
     ['server_id']
 )
 
+# -----------------------------
+# REQUEST TIMING
+# -----------------------------
 @app.before_request
 def before_req():
     request._start_time = time.time()
@@ -88,10 +91,12 @@ def after_req(response):
 # -----------------------------
 def background_server_updates(interval=5):
     while True:
-        for srv in simulated_servers:
-            srv.update()
+        with app.app_context():
+            for srv in simulated_servers:
+                srv.update()
         time.sleep(interval)
 
+# Start the background thread
 thread = threading.Thread(target=background_server_updates, daemon=True)
 thread.start()
 
@@ -159,3 +164,4 @@ if __name__ == "__main__":
     with app.app_context():
         db.create_all()
     app.run(host="0.0.0.0", port=5000, debug=True)
+
