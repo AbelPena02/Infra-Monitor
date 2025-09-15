@@ -1,166 +1,174 @@
-from flask import Flask, Response, jsonify, request
-from prometheus_client import Counter, Gauge, Histogram, generate_latest
-from db import db, Server
-from servers import get_all_servers, servers_bp, get_simulated_metrics_for_db_servers, simulated_servers
-import logging
+import random
 import time
-from sqlalchemy import text
-from logger import logger
-from config import Config
-import threading
+from flask import Blueprint, request, jsonify
+from db import db, Server 
+
+class SimulatedServer:
+    def __init__(self, server_id):
+        self.id = server_id 
+        self.sim_name = f"srv-{server_id}"  
+        self.state = "RUNNING"
+        self.cpu_usage = 0.0
+        self.memory_usage = 0
+        self.uptime = 0
+        self.last_checked = time.time()
+
+    def update(self):
+        now = time.time()
+        elapsed = now - self.last_checked
+        self.last_checked = now
+
+        if random.random() < 0.05:
+            self.state = "FAILED"
+            self.cpu_usage = 0.0
+            self.memory_usage = 0
+            self.uptime = 0
+        else:
+            if self.state == "FAILED" and random.random() < 0.3:
+                self.state = "BOOTING"
+                self.uptime = 0
+            if self.state == "BOOTING":
+                if random.random() < 0.5:
+                    self.state = "RUNNING"
+            if self.state == "RUNNING":
+                self.cpu_usage = round(random.uniform(10, 90), 2)
+                self.memory_usage = random.randint(256, 2048)
+                self.uptime += int(elapsed)
+            if self.state == "REBOOTING":
+                self.state = "RUNNING"
+
+        db_server = Server.query.get(self.id)
+        if db_server:
+            db_server.status = self.state
+            db_server.cpu_usage = self.cpu_usage
+            db_server.memory_usage = self.memory_usage
+            db_server.uptime = self.uptime
+            db.session.commit()
+
+        return self.to_dict()
+
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "state": self.state,
+            "cpu_usage": self.cpu_usage,
+            "memory_usage": self.memory_usage,
+            "uptime": self.uptime
+        }
+
+simulated_servers = [SimulatedServer(i) for i in range(1, 4)]
+_sim_map = {}
+
+def get_all_servers():
+    return [srv.update() for srv in simulated_servers]
+
+def _ensure_sim_for_dbserver(db_server):
+    key = str(db_server.id)
+    if key not in _sim_map:
+        _sim_map[key] = SimulatedServer(key)
+        _sim_map[key].state = db_server.status
+        _sim_map[key].cpu_usage = db_server.cpu_usage
+        _sim_map[key].memory_usage = db_server.memory_usage
+        _sim_map[key].uptime = db_server.uptime
+    return _sim_map[key]
+
+
+def get_simulated_metrics_for_db_servers():
+    rows = Server.query.all()
+    result = []
+    for r in rows:
+        sim = _ensure_sim_for_dbserver(r)
+        m = sim.update()
+        m['id'] = r.id
+        m['hostname'] = getattr(r, "hostname", None)
+        m['status'] = getattr(r, "status", None)
+        result.append(m)
+    return result
+
+def _remove_sim_for_dbserver_id(server_id):
+    _sim_map.pop(str(server_id), None)
 
 # -----------------------------
-# FLASK APP
+# Flask Blueprint
 # -----------------------------
-app = Flask(__name__)
-app.config.from_object(Config) 
+servers_bp = Blueprint("servers", __name__)
 
-db.init_app(app)
-app.register_blueprint(servers_bp, url_prefix="/servers")
+@servers_bp.route("/", methods=["POST"])
+def create_server():
+    data = request.json
+    server = Server(
+        hostname=data["hostname"],
+        ip_address=data["ip_address"],
+        status=data.get("status", "RUNNING")
+    )
+    db.session.add(server)
+    db.session.commit()
+    _ensure_sim_for_dbserver(server)
+    return jsonify({
+        "id": server.id,
+        "hostname": server.hostname,
+        "ip_address": server.ip_address,
+        "status": server.status
+    }), 201
 
-# -----------------------------
-# LOGGING
-# -----------------------------
-logging.basicConfig(
-    filename="app.log",
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s: %(message)s"
-)
+@servers_bp.route("/", methods=["GET"])
+def get_servers():
+    servers = Server.query.all()
+    return jsonify([
+        {"id": s.id, "hostname": s.hostname, "ip_address": s.ip_address, "status": s.status}
+        for s in servers
+    ])
 
-# -----------------------------
-# PROMETHEUS METRICS
-# -----------------------------
-requests_total = Counter(
-    'requests_total',
-    'Total number of requests'
-)
+@servers_bp.route("/<int:server_id>", methods=["GET"])
+def get_server(server_id):
+    server = Server.query.get_or_404(server_id)
+    return jsonify({
+        "id": server.id,
+        "hostname": server.hostname,
+        "ip_address": server.ip_address,
+        "status": server.status
+    })
 
-requests_by_endpoint = Counter(
-    'requests_by_endpoint',
-    'HTTP requests by endpoint and method',
-    ['endpoint', 'method']
-)
+@servers_bp.route("/<int:server_id>", methods=["PUT"])
+def update_server(server_id):
+    server = Server.query.get_or_404(server_id)
+    data = request.json
+    server.hostname = data.get("hostname", server.hostname)
+    server.ip_address = data.get("ip_address", server.ip_address)
+    server.status = data.get("status", server.status)
+    db.session.commit()
+    return jsonify({"message": "Server updated"})
 
-request_latency = Histogram(
-    'http_request_latency_seconds',
-    'HTTP request latency in seconds',
-    ['endpoint']
-)
+@servers_bp.route("/<int:server_id>", methods=["DELETE"])
+def delete_server(server_id):
+    server = Server.query.get_or_404(server_id)
+    db.session.delete(server)
+    db.session.commit()
+    _remove_sim_for_dbserver_id(server_id)
+    return jsonify({"message": "Server deleted"})
 
-server_cpu = Gauge(
-    'server_cpu_usage',
-    'CPU usage percentage',
-    ['server_id']
-)
+@servers_bp.route("/<int:server_id>/metrics", methods=["GET"])
+def server_metrics(server_id):
+    server = Server.query.get_or_404(server_id)
+    sim = _ensure_sim_for_dbserver(server)
+    m = sim.update()
+    return jsonify({
+        "server_id": server.id,
+        "hostname": server.hostname,
+        "metrics": {
+            "cpu": m["cpu_usage"],
+            "memory": m["memory_usage"],
+            "uptime": m["uptime"],
+            "state": m["state"]
+        }
+    })
 
-server_memory = Gauge(
-    'server_memory_usage',
-    'Memory usage MB',
-    ['server_id']
-)
-
-server_state = Gauge(
-    'server_state',
-    'Server state (0=FAILED,1=RUNNING,2=BOOTING)',
-    ['server_id']
-)
-
-# -----------------------------
-# REQUEST TIMING
-# -----------------------------
-@app.before_request
-def before_req():
-    request._start_time = time.time()
-
-@app.after_request
-def after_req(response):
-    try:
-        endpoint = request.path
-        method = request.method
-        elapsed = time.time() - getattr(request, "_start_time", time.time())
-        requests_total.inc()
-        requests_by_endpoint.labels(endpoint=endpoint, method=method).inc()
-        if endpoint != "/metrics":
-            request_latency.labels(endpoint=endpoint).observe(elapsed)
-    except Exception as e:
-        logging.error(f"Metrics instrumentation error: {e}")
-    return response
-
-# -----------------------------
-# BACKGROUND SCHEDULER
-# -----------------------------
-def background_server_updates(interval=5):
-    while True:
-        with app.app_context():
-            for srv in simulated_servers:
-                srv.update()
-        time.sleep(interval)
-
-# Start the background thread
-thread = threading.Thread(target=background_server_updates, daemon=True)
-thread.start()
-
-# -----------------------------
-# ENDPOINTS
-# -----------------------------
-@app.route("/")
-def home():
-    logging.info("New request received at /")
-    status = "Infra Monitor API running!"
-    try:
-        db.session.execute(text("SELECT 1"))
-    except Exception as e:
-        logging.error(f"DB connection error: {e}")
-        status += " (DB error)"
-    return status
-
-@app.route("/simulated-servers")
-def simulated_servers_endpoint():
-    logging.info("Simulated servers endpoint called")
-    servers = get_all_servers()
-    return jsonify(servers)
-
-@app.route("/health")
-def health():
-    status = {"status": "ok", "db": "connected"}
-    try:
-        db.session.execute(text("SELECT 1"))
-    except Exception as e:
-        status["db"] = "error"
-        logging.error(f"Health DB check failed: {e}")
-    return jsonify(status)
-
-@app.route("/metrics")
-def metrics():
-    try:
-        db_count = Server.query.count()
-    except Exception:
-        db_count = 0
-
-    if db_count > 0:
-        servers_metrics = get_simulated_metrics_for_db_servers()
-    else:
-        servers_metrics = get_all_servers()
-
-    state_map = {"FAILED": 0, "RUNNING": 1, "BOOTING": 2}
-
-    for srv in servers_metrics:
-        sid = str(srv.get("id", "unknown"))
-        cpu = float(srv.get("cpu_usage", 0))
-        mem = float(srv.get("memory_usage", 0))
-        state = srv.get("state", "FAILED")
-
-        server_cpu.labels(server_id=sid).set(cpu)
-        server_memory.labels(server_id=sid).set(mem)
-        server_state.labels(server_id=sid).set(state_map.get(state, 0))
-
-    logger.info("Metrics scraped for %d servers", len(servers_metrics))
-    return Response(generate_latest(), mimetype="text/plain")
-
-# -----------------------------
-# MAIN
-# -----------------------------
-if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
-    app.run(host="0.0.0.0", port=5000, debug=True)
+@servers_bp.route("/simulated/<server_id>", methods=["DELETE"])
+def delete_simulated(server_id):
+    global simulated_servers
+    index = next((i for i, s in enumerate(simulated_servers) if s.id == server_id), None)
+    if index is not None:
+        simulated_servers.pop(index)
+        return jsonify({"message": f"Simulated server {server_id} deleted"}), 200
+    return jsonify({"error": "Server not found"}), 404
