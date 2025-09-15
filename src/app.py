@@ -1,12 +1,13 @@
 from flask import Flask, Response, jsonify, request
 from prometheus_client import Counter, Gauge, Histogram, generate_latest
 from db import db, Server
-from servers import get_all_servers, servers_bp, get_simulated_metrics_for_db_servers
+from servers import get_all_servers, servers_bp, get_simulated_metrics_for_db_servers, simulated_servers
 import logging
 import time
 from sqlalchemy import text
 from logger import logger
 from config import Config
+import threading
 
 # -----------------------------
 # FLASK APP
@@ -81,6 +82,18 @@ def after_req(response):
     except Exception as e:
         logging.error(f"Metrics instrumentation error: {e}")
     return response
+
+# -----------------------------
+# BACKGROUND SCHEDULER
+# -----------------------------
+def background_server_updates(interval=5):
+    while True:
+        for srv in simulated_servers:
+            srv.update()
+        time.sleep(interval)
+
+thread = threading.Thread(target=background_server_updates, daemon=True)
+thread.start()
 
 # -----------------------------
 # ENDPOINTS
