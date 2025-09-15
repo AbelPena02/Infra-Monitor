@@ -6,17 +6,13 @@ import logging
 import time
 from sqlalchemy import text
 from logger import logger
+from config import Config
 
 # -----------------------------
 # FLASK APP
 # -----------------------------
 app = Flask(__name__)
-
-# -----------------------------
-# CONFIG
-# -----------------------------
-app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql://monitor:monitor123@localhost:5432/infra_monitor"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config.from_object(Config) 
 
 db.init_app(app)
 app.register_blueprint(servers_bp, url_prefix="/servers")
@@ -143,108 +139,10 @@ def metrics():
     logger.info("Metrics scraped for %d servers", len(servers_metrics))
     return Response(generate_latest(), mimetype="text/plain")
 
-@app.route("/servers", methods=["POST"])
-def create_server():
-    data = request.get_json()
-    
-    if not data.get("name") or not data.get("cpu_usage") or not data.get("memory_usage") or not data.get("state"):
-        logger.warning("Invalid server creation attempt: %s", data)
-        return {"error": "Missing required fields"}, 400
-
-    cpu = data["cpu_usage"]
-    memory = data["memory_usage"]
-    if not (0 <= cpu <= 100) or not (0 <= memory <= 100):
-        logger.warning("CPU or memory out of range: %s", data)
-        return {"error": "CPU or memory out of range"}, 400
-
-    if data["state"] not in ["BOOTING", "RUNNING", "FAILED"]:
-        logger.warning("Invalid state value: %s", data)
-        return {"error": "Invalid state value"}, 400
-
-    server = Server(
-        name=data["name"],
-        cpu_usage=cpu,
-        memory_usage=memory,
-        state=data["state"]
-    )
-    db.session.add(server)
-    db.session.commit()
-
-    logger.info("Server created: %s", data["name"])
-    return {"status": "success", "id": server.id}, 201
-
-@app.route("/servers/<int:server_id>", methods=["PUT"])
-def update_server(server_id):
-    data = request.get_json()
-    server = Server.query.get(server_id)
-    if not server:
-        logger.warning("Update failed, server_id=%d not found", server_id)
-        return {"error": "Server not found"}, 404
-
-    cpu = data.get("cpu_usage", server.cpu_usage)
-    memory = data.get("memory_usage", server.memory_usage)
-    state = data.get("state", server.state)
-
-    if not (0 <= cpu <= 100) or not (0 <= memory <= 100):
-        logger.warning("CPU or memory out of range: %s", data)
-        return {"error": "CPU or memory out of range"}, 400
-    if state not in ["BOOTING", "RUNNING", "FAILED"]:
-        logger.warning("Invalid state value: %s", data)
-        return {"error": "Invalid state value"}, 400
-
-    server.cpu_usage = cpu
-    server.memory_usage = memory
-    server.state = state
-    db.session.commit()
-
-    logger.info("Server updated: server_id=%d", server_id)
-    return {"status": "success"}, 200
-
-@app.route("/servers/<int:server_id>", methods=["DELETE"])
-def delete_server(server_id):
-    server = Server.query.get(server_id)
-    if not server:
-        logger.warning("Delete failed, server_id=%d not found", server_id)
-        return {"error": "Server not found"}, 404
-
-    db.session.delete(server)
-    db.session.commit()
-    logger.info("Server deleted: server_id=%d", server_id)
-    return {"status": "deleted"}, 200
-
-@app.route("/servers/<int:server_id>", methods=["GET"])
-def get_server(server_id):
-    server = Server.query.get(server_id)
-    if not server:
-        logger.warning("Get failed, server_id=%d not found", server_id)
-        return {"error": "Server not found"}, 404
-
-    logger.info("Server retrieved: server_id=%d", server_id)
-    return {
-        "server": {
-            "id": server.id,
-            "name": server.name,
-            "cpu_usage": server.cpu_usage,
-            "memory_usage": server.memory_usage,
-            "state": server.state
-        }
-    }, 200
-
-@app.route("/simulated-servers/<server_id>", methods=["DELETE"])
-def delete_simulated_server(server_id):
-    servers = get_all_servers()
-    index = next((i for i, s in enumerate(servers) if s["id"] == server_id), None)
-    if index is not None:
-        servers.pop(index)
-        logger.info("Deleted simulated server %s", server_id)
-        return {"status": "deleted"}, 200
-    return {"error": "server not found"}, 404
-
-
 # -----------------------------
 # MAIN
 # -----------------------------
 if __name__ == "__main__":
     with app.app_context():
-        db.create_all() 
+        db.create_all()
     app.run(host="0.0.0.0", port=5000, debug=True)
