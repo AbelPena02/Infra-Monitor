@@ -23,13 +23,18 @@ class SimulatedServer:
             self.memory_usage = 0
             self.uptime = 0
         else:
-            if self.state == "FAILED" and random.random() < 0.3:
-                self.state = "BOOTING"
-                self.uptime = 0
-            if self.state == "BOOTING":
+            if self.state == "FAILED":
+                if random.random() < 0.3:
+                    self.state = "REBOOTING"
+                    self.uptime = 0
+            elif self.state == "REBOOTING":
+                if random.random() < 0.5:
+                    self.state = "BOOTING"
+                    self.uptime = 0
+            elif self.state == "BOOTING":
                 if random.random() < 0.5:
                     self.state = "RUNNING"
-            if self.state == "RUNNING":
+            elif self.state == "RUNNING":
                 self.cpu_usage = round(random.uniform(10, 90), 2)
                 self.memory_usage = random.randint(256, 2048)
                 self.uptime += int(elapsed)
@@ -72,6 +77,9 @@ def get_simulated_metrics_for_db_servers():
 def _remove_sim_for_dbserver_id(server_id):
     _sim_map.pop(str(server_id), None)
 
+# -----------------------------
+# Flask Blueprint
+# -----------------------------
 servers_bp = Blueprint("servers", __name__)
 
 @servers_bp.route("/", methods=["POST"])
