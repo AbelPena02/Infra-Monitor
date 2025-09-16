@@ -157,6 +157,15 @@ def metrics():
     logger.info("Metrics scraped for %d servers", len(servers_metrics))
     return Response(generate_latest(), mimetype="text/plain")
 
+@app.route("/lifecycle")
+def lifecycle():
+    servers = get_all_servers()
+    lifecycle_info = [
+        {"id": srv["id"], "state": srv["state"]}
+        for srv in servers
+    ]
+    return jsonify(lifecycle_info)
+
 # -----------------------------
 # MAIN
 # -----------------------------
@@ -164,4 +173,3 @@ if __name__ == "__main__":
     with app.app_context():
         db.create_all()
     app.run(host="0.0.0.0", port=5000, debug=True)
-
