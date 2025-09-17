@@ -77,41 +77,41 @@ pip install -r requirements.txt
 ### Running Locally ###
 Using Flask and local services
 
-## Activate environment
+### Activate environment ###
 source venv/bin/activate
 
-## Start Flask API
+### Start Flask API ###
 python app.py
 
-## Start Prometheus
+### Start Prometheus ###
 prometheus --config.file=prometheus.yml
 
-## Start Grafana (Mac)
+### Start Grafana (Mac) ###
 brew services start grafana
 
-## Start PostgreSQL (Mac)
+### Start PostgreSQL (Mac) ###
 brew services start postgresql
 
 Using Docker Compose
 
-## Build containers
+### Build containers ###
 docker-compose build
 
-## Start stack
+### Start stack ###
 docker-compose up
 
 Stop services
-## Stop Flask
+### Stop Flask ###
 Ctrl + C in terminal
 
-## Stop Prometheus
+### Stop Prometheus ###
 Ctrl + C in terminal
 
-## Stop Grafana and PostgreSQL
+### Stop Grafana and PostgreSQL ###
 brew services stop grafana
 brew services stop postgresql
 
-## Using Docker
+### Using Docker ###
 docker-compose down
 
 ### Endpoints ###
@@ -180,4 +180,5 @@ Build Docker image
 Push to DockerHub (optional)
 
 Automatic deploy to EC2 (optional)
+
 
