@@ -6,14 +6,19 @@ import logging
 import time
 from sqlalchemy import text
 from logger import logger
-from config import Config
+from config import Config, TestConfig
 import threading
+import os
 
 # -----------------------------
 # FLASK APP
 # -----------------------------
 app = Flask(__name__)
-app.config.from_object(Config) 
+
+if os.getenv("FLASK_ENV") == "testing":
+    app.config.from_object(TestConfig)
+else:
+    app.config.from_object(Config)
 
 db.init_app(app)
 app.register_blueprint(servers_bp, url_prefix="/servers")
@@ -30,40 +35,12 @@ logging.basicConfig(
 # -----------------------------
 # PROMETHEUS METRICS
 # -----------------------------
-requests_total = Counter(
-    'requests_total',
-    'Total number of requests'
-)
-
-requests_by_endpoint = Counter(
-    'requests_by_endpoint',
-    'HTTP requests by endpoint and method',
-    ['endpoint', 'method']
-)
-
-request_latency = Histogram(
-    'http_request_latency_seconds',
-    'HTTP request latency in seconds',
-    ['endpoint']
-)
-
-server_cpu = Gauge(
-    'server_cpu_usage',
-    'CPU usage percentage',
-    ['server_id']
-)
-
-server_memory = Gauge(
-    'server_memory_usage',
-    'Memory usage MB',
-    ['server_id']
-)
-
-server_state = Gauge(
-    'server_state',
-    'Server state (0=FAILED,1=RUNNING,2=BOOTING)',
-    ['server_id']
-)
+requests_total = Counter('requests_total', 'Total number of requests')
+requests_by_endpoint = Counter('requests_by_endpoint', 'HTTP requests by endpoint and method', ['endpoint', 'method'])
+request_latency = Histogram('http_request_latency_seconds', 'HTTP request latency in seconds', ['endpoint'])
+server_cpu = Gauge('server_cpu_usage', 'CPU usage percentage', ['server_id'])
+server_memory = Gauge('server_memory_usage', 'Memory usage MB', ['server_id'])
+server_state = Gauge('server_state', 'Server state (0=FAILED,1=RUNNING,2=BOOTING)', ['server_id'])
 
 # -----------------------------
 # REQUEST TIMING
@@ -96,7 +73,6 @@ def background_server_updates(interval=5):
                 srv.update()
         time.sleep(interval)
 
-# Start the background thread
 thread = threading.Thread(target=background_server_updates, daemon=True)
 thread.start()
 
@@ -143,13 +119,11 @@ def metrics():
         servers_metrics = get_all_servers()
 
     state_map = {"FAILED": 0, "RUNNING": 1, "BOOTING": 2}
-
     for srv in servers_metrics:
         sid = str(srv.get("id", "unknown"))
         cpu = float(srv.get("cpu_usage", 0))
         mem = float(srv.get("memory_usage", 0))
         state = srv.get("state", "FAILED")
-
         server_cpu.labels(server_id=sid).set(cpu)
         server_memory.labels(server_id=sid).set(mem)
         server_state.labels(server_id=sid).set(state_map.get(state, 0))
@@ -160,10 +134,7 @@ def metrics():
 @app.route("/lifecycle")
 def lifecycle():
     servers = get_all_servers()
-    lifecycle_info = [
-        {"id": srv["id"], "state": srv["state"]}
-        for srv in servers
-    ]
+    lifecycle_info = [{"id": srv["id"], "state": srv["state"]} for srv in servers]
     return jsonify(lifecycle_info)
 
 # -----------------------------
