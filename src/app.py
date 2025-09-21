@@ -9,6 +9,7 @@ from logger import logger
 from config import Config, TestConfig
 import threading
 import os
+from werkzeug.exceptions import NotFound
 
 # -----------------------------
 # FLASK APP
@@ -75,6 +76,19 @@ def background_server_updates(interval=5):
 
 thread = threading.Thread(target=background_server_updates, daemon=True)
 thread.start()
+
+# -----------------------------
+# ERROR HANDLERS
+# -----------------------------
+@app.errorhandler(NotFound)
+def handle_404_error(e):
+    logging.warning(f"Resource not found: {e}")
+    return jsonify({"error": "Resource not found"}), 404
+
+@app.errorhandler(Exception)
+def handle_generic_error(e):
+    logging.error(f"Unhandled Exception: {e}")
+    return jsonify({"error": "Internal server error"}), 500
 
 # -----------------------------
 # ENDPOINTS
