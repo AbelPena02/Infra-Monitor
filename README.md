@@ -14,6 +14,12 @@ Infra Monitor & Lifecycle Simulator is a server infrastructure simulation and mo
 
 5.-Manage the full server lifecycle: BOOTING → RUNNING → FAILED → REBOOTING.
 
+6.-Automatically simulate lifecycle transitions via a background job (`lifecycle_manager.py`).
+
+7.-Improve error handling and observability with centralized logging and exception management.
+
+8.-Run automated tests with `pytest` for server lifecycle and API endpoints (`test_servers.py`).
+
 Designed for local and cloud environments (AWS EC2, Docker) with CI/CD for automated deployments.
 
 
@@ -25,13 +31,17 @@ Designed for local and cloud environments (AWS EC2, Docker) with CI/CD for autom
 
 3.-Servers (servers.py): server simulation (CPU, memory, state).
 
-4.-Prometheus: scrape /metrics.
+4.-Lifecycle Manager (lifecycle_manager.py): manages lifecycle state transitions periodically.
 
-5.-Grafana: dashboards and alerts.
+5.-Tests (test_servers.py): automated tests for endpoints and lifecycle.
 
-6.-Docker / Docker Compose: local stack orchestration.
+6.-Prometheus: scrape /metrics.
 
-7.-CI/CD: GitHub Actions for tests and deployments.
+7.-Grafana: dashboards and alerts.
+
+8.-Docker / Docker Compose: local stack orchestration.
+
+9.-CI/CD: GitHub Actions for tests and deployments.
 
 
 ### Technologies ###
@@ -48,6 +58,8 @@ Containers - Docker 28.3.3, Docker Compose 1.29+
 CI/CD - GitHub Actions
 
 Logging - Python logging, app.log
+
+Testing - pytest
 
 
 ### Installation ###
@@ -74,6 +86,7 @@ python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 
+
 ### Running Locally ###
 Using Flask and local services
 
@@ -92,6 +105,7 @@ brew services start grafana
 ### Start PostgreSQL (Mac) ###
 brew services start postgresql
 
+
 Using Docker Compose
 
 ### Build containers ###
@@ -100,7 +114,9 @@ docker-compose build
 ### Start stack ###
 docker-compose up
 
+
 Stop services
+
 ### Stop Flask ###
 Ctrl + C in terminal
 
@@ -114,12 +130,27 @@ brew services stop postgresql
 ### Using Docker ###
 docker-compose down
 
+
 ### Endpoints ###
 Endpoint - Method - Description
 
 / -     GET     -Home, inserts a request log
 
 /servers -     GET     -Returns simulated servers
+
+/servers -     POST    -Creates a new server
+
+/servers/<id> - GET    -Returns a specific server
+
+/servers/<id> - PUT    -Updates a server
+
+/servers/<id> - DELETE -Deletes a server
+
+/servers/<id>/metrics - GET -Returns metrics for a server
+
+/simulated/<id> - DELETE -Deletes a simulated server
+
+/lifecycle - GET -Returns current lifecycle states of all servers
 
 /health -     GET     -API and DB status
 
@@ -140,6 +171,7 @@ Memory per server: server_memory_usage
 
 Server state: server_state (0=FAILED,1=RUNNING,2=BOOTING)
 
+
 ### Drafana Dashboards ###
 
 Recommended panels:
@@ -153,6 +185,7 @@ Latency p95 per endpoint (Time series)
 CPU per server (Gauge / Time series)
 
 Server state (Gauge)
+
 
 ### Database ###
 Main tables
@@ -169,6 +202,7 @@ Example queries
 SELECT * FROM servers;
 SELECT * FROM requests_log;
 
+
 ### CI/CD ###
 
 GitHub Actions configured to:
@@ -181,5 +215,20 @@ Push to DockerHub (optional)
 
 Automatic deploy to EC2 (optional)
 
+### Automated Testing ###
 
+Unit and integration tests implemented using pytest.
 
+To run tests:
+pytest
+
+Test coverage includes:
+
+- Server creation, update, and deletion
+- Metrics accuracy
+- Lifecycle state changes
+- API health
+
+Test files:
+- test_servers.py
+- test_basic.py
