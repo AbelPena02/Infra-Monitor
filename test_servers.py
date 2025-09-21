@@ -33,7 +33,6 @@ def test_update_server(client):
         "ip_address": "10.0.0.1"
     })
     server_id = response.get_json()["id"]
-    
     response = client.put(f"/servers/{server_id}", json={
         "hostname": "updated-server",
         "status": "FAILED"
