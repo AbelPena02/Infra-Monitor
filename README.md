@@ -78,12 +78,17 @@ Grafana
 Homebrew (optional for Mac services)
 
 Clone repository
+
 git clone https://github.com/AbelPena02/Infra-Monitor.git
+
 cd Infra-Monitor
 
 Create virtual environment
+
 python -m venv venv
+
 source venv/bin/activate
+
 pip install -r requirements.txt
 
 
@@ -232,3 +237,4 @@ Test coverage includes:
 Test files:
 - test_servers.py
 - test_basic.py
+
