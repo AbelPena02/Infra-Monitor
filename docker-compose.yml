@@ -16,7 +16,7 @@ services:
       - DB_USER=monitor
       - DB_PASSWORD=monitor123
     volumes:
-      - .:/app
+      - ./src:/app
 
   db:
     image: postgres:15
@@ -37,7 +37,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus:/etc/prometheus
+       - ./config/prometheus.yml:/prometheus.yml
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
 
