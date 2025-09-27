@@ -1,0 +1,31 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd ~/infra-monitor
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/infra-monitor:latest
+            docker stop infra-monitor || true
+            docker rm infra-monitor || true
+            docker run -d \
+              --name infra-monitor \
+              -p 5000:5000 \
+              -p 3000:3000 \
+              ${{ secrets.DOCKERHUB_USERNAME }}/infra-monitor:latest
