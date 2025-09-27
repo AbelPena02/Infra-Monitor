@@ -207,7 +207,6 @@ Example queries
 SELECT * FROM servers;
 SELECT * FROM requests_log;
 
-
 ### CI/CD ###
 
 GitHub Actions configured to:
@@ -237,5 +236,6 @@ Test coverage includes:
 Test files:
 - test_servers.py
 - test_basic.py
+
 
 
