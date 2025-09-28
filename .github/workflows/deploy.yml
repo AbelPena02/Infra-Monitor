@@ -21,11 +21,5 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd ~/infra-monitor
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/infra-monitor:latest
-            docker stop infra-monitor || true
-            docker rm infra-monitor || true
-            docker run -d \
-              --name infra-monitor \
-              -p 5000:5000 \
-              -p 3000:3000 \
-              ${{ secrets.DOCKERHUB_USERNAME }}/infra-monitor:latest
+            docker compose pull
+            docker compose up -d
