@@ -215,9 +215,9 @@ Lint and test Python code
 
 Build Docker image
 
-Push to DockerHub (optional)
+Push to DockerHub
 
-Automatic deploy to EC2 (optional)
+Automatic deploy to EC2
 
 ### Automated Testing ###
 
@@ -236,6 +236,3 @@ Test coverage includes:
 Test files:
 - test_servers.py
 - test_basic.py
-
-
-
