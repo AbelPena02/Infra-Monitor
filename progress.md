@@ -1,6 +1,6 @@
 # Project Progress Log
 
-This project was developed as part of a personal 29-day challenge, focused on building a fully functional and monitored infrastructure using tools like Flask, PostgreSQL, Docker, Prometheus, Grafana, AWS EC2, GitHub Actions, and more.
+This document summarizes the development progress of the infrastructure monitoring system. The project was built incrementally over 29 days, focusing on integrating key technologies such as Flask, PostgreSQL, Docker, Prometheus, Grafana, AWS EC2, and GitHub Actions.
 
 Below is a day-by-day summary of the development progress:
 
