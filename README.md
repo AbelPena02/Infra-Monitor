@@ -18,7 +18,7 @@ Infra Monitor & Lifecycle Simulator is a server infrastructure simulation and mo
 
 7.-Improve error handling and observability with centralized logging and exception management.
 
-8.-Run automated tests with `pytest` for server lifecycle and API endpoints (`test_servers.py`).
+8.-Run automated tests with `pytest` for server lifecycle and API endpoints (`test_servers.py`, `test_basic.py`).
 
 Designed for local and cloud environments (AWS EC2, Docker) with CI/CD for automated deployments.
 
@@ -33,7 +33,7 @@ Designed for local and cloud environments (AWS EC2, Docker) with CI/CD for autom
 
 4.-Lifecycle Manager (lifecycle_manager.py): manages lifecycle state transitions periodically.
 
-5.-Tests (test_servers.py): automated tests for endpoints and lifecycle.
+5.-Tests (test_servers.py, test_basic.py): automated tests for endpoints and lifecycle.
 
 6.-Prometheus: scrape /metrics.
 
@@ -236,3 +236,4 @@ Test coverage includes:
 Test files:
 - test_servers.py
 - test_basic.py
+
