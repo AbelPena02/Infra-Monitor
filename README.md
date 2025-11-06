@@ -1,184 +1,175 @@
-## Infra Monitor & Lifecycle Simulator ##
+# Infra Monitor & Lifecycle Simulator
 
-### Description ###
+## Description
 
-Infra Monitor & Lifecycle Simulator is a server infrastructure simulation and monitoring system. It allows you to:
+**Infra Monitor & Lifecycle Simulator** is a server infrastructure simulation and monitoring system. It allows you to:
 
-1.-Simulate multiple servers with CPU, memory, and state metrics.
+1. Simulate multiple servers with CPU, memory, and state metrics.  
+2. Log and store requests and events in **PostgreSQL**.  
+3. Expose metrics to **Prometheus** for monitoring.  
+4. Visualize dashboards and alerts in **Grafana**.  
+5. Manage the full server lifecycle: `BOOTING → RUNNING → FAILED → REBOOTING`.  
+6. Automatically simulate lifecycle transitions via a background job (`lifecycle_manager.py`).  
+7. Improve error handling and observability with centralized logging and exception management.  
+8. Run automated tests with `pytest` for server lifecycle and API endpoints (`test_servers.py`).  
 
-2.-Log and store requests and events in PostgreSQL.
+Designed for **local** and **cloud environments** (AWS EC2, Docker) with **CI/CD** for automated deployments.
 
-3.-Expose metrics to Prometheus for monitoring.
+---
 
-4.-Visualize dashboards and alerts in Grafana.
+## Architecture
 
-5.-Manage the full server lifecycle: BOOTING → RUNNING → FAILED → REBOOTING.
-
-6.-Automatically simulate lifecycle transitions via a background job (`lifecycle_manager.py`).
-
-7.-Improve error handling and observability with centralized logging and exception management.
-
-8.-Run automated tests with `pytest` for server lifecycle and API endpoints (`test_servers.py`, `test_basic.py`).
-
-Designed for local and cloud environments (AWS EC2, Docker) with CI/CD for automated deployments.
-
-
-### Architecture ###
-
-1.-Flask API (app.py): /, /servers, /health, /metrics.
-
-2.-DB (db.py): PostgreSQL connection.
-
-3.-Servers (servers.py): server simulation (CPU, memory, state).
-
-4.-Lifecycle Manager (lifecycle_manager.py): manages lifecycle state transitions periodically.
-
-5.-Tests (test_servers.py, test_basic.py): automated tests for endpoints and lifecycle.
-
-6.-Prometheus: scrape /metrics.
-
-7.-Grafana: dashboards and alerts.
-
-8.-Docker / Docker Compose: local stack orchestration.
-
-9.-CI/CD: GitHub Actions for tests and deployments.
-
-
-### Technologies ###
-Component - Technology/Version
-
-Backend - Python 3.13, Flask 2.3.4
-
-Database - PostgreSQL 15
-
-Monitoring - Prometheus 2.x, Grafana 10.x
-
-Containers - Docker 28.3.3, Docker Compose 1.29+
-
-CI/CD - GitHub Actions
-
-Logging - Python logging, app.log
-
-Testing - pytest
+```
++------------+      +-------------+
+|  Clients   | ---> |  Flask API  |
++------------+      +-------------+
+                         |
+                         v
+                 +---------------+
+                 |  servers.py   |
+                 |  db.py        |
+                 +---------------+
+                         |
+                         v
+                 +--------------------+
+                 | PostgreSQL Database|
+                 |   infra_monitor    |
+                 +--------------------+
+                         |
+                         v
++-------------+     +----------------+     +---------+
+| Prometheus  | <---| Flask Metrics | ---> | Grafana |
++-------------+     +----------------+     +---------+
+```
 
 
-### Installation ###
-Requirements
+**Components:**
 
-Python 3.13+
+1. **Flask API (`app.py`)** — Endpoints: `/`, `/servers`, `/health`, `/metrics`.  
+2. **Database (`db.py`)** — PostgreSQL connection and queries.  
+3. **Servers (`servers.py`)** — Simulated servers (CPU, memory, state).  
+4. **Lifecycle Manager (`lifecycle_manager.py`)** — Periodic lifecycle state transitions.  
+5. **Tests (`test_servers.py`)** — Automated tests for endpoints and lifecycle.  
+6. **Prometheus** — Scrapes `/metrics`.  
+7. **Grafana** — Dashboards and alerts.  
+8. **Docker / Docker Compose** — Local orchestration.  
+9. **CI/CD (GitHub Actions)** — Automated testing and deployments.
 
-Docker & Docker Compose
+---
 
-PostgreSQL (or Dockerized)
+## Technologies
 
-Prometheus
+| Component     | Technology / Version        |
+|----------------|-----------------------------|
+| Backend        | Python 3.13, Flask 2.3.4    |
+| Database       | PostgreSQL 15               |
+| Monitoring     | Prometheus 2.x, Grafana 10.x |
+| Containers     | Docker 28.3.3, Docker Compose 1.29+ |
+| CI/CD          | GitHub Actions              |
+| Logging        | Python logging (`app.log`)  |
+| Testing        | pytest                      |
 
-Grafana
+---
 
-Homebrew (optional for Mac services)
+## Installation
 
-Clone repository
+### Requirements
+- Python **3.13+**  
+- Docker & Docker Compose  
+- PostgreSQL (local or Dockerized)  
+- Prometheus  
+- Grafana  
+- Homebrew *(optional, for Mac services)*
 
+### Clone repository
+```bash
 git clone https://github.com/AbelPena02/Infra-Monitor.git
-
 cd Infra-Monitor
+```
 
 Create virtual environment
-
+```bash
 python -m venv venv
-
 source venv/bin/activate
-
 pip install -r requirements.txt
-
-
-### Running Locally ###
+Running Locally
 Using Flask and local services
+```
 
-### Activate environment ###
+Activate environment
+```bash
 source venv/bin/activate
-
-### Start Flask API ###
+```
+Start Flask API
+```bash
 python app.py
-
-### Start Prometheus ###
+```
+Start Prometheus
+```bash
 prometheus --config.file=prometheus.yml
-
-### Start Grafana (Mac) ###
+```
+Start Grafana (Mac)
+```bash
 brew services start grafana
-
-### Start PostgreSQL (Mac) ###
+```
+Start PostgreSQL (Mac)
+```bash
 brew services start postgresql
-
-
+```
 Using Docker Compose
-
-### Build containers ###
+Build containers
+```bash
 docker-compose build
-
-### Start stack ###
+```
+Start stack
+```bash
 docker-compose up
-
-
-Stop services
-
-### Stop Flask ###
-Ctrl + C in terminal
-
-### Stop Prometheus ###
-Ctrl + C in terminal
-
-### Stop Grafana and PostgreSQL ###
+```
+Stop Services
+Stop Flask
+```bash
+Ctrl + C
+```
+Stop Prometheus
+```bash
+Ctrl + C
+```
+Stop Grafana and PostgreSQL (Mac)
+```bash
 brew services stop grafana
 brew services stop postgresql
-
-### Using Docker ###
+```
+Using Docker
+```bash
 docker-compose down
+```
+## Endpoints
+
+| Endpoint                | Method | Description                      | Request Example                         | Response Example                                           |
+| ----------------------- | ------ | -------------------------------- | --------------------------------------- | ---------------------------------------------------------- |
+| `/`                     | GET    | Home, inserts a request log      | -                                       | -                                                          |
+| `/servers`              | GET    | Returns simulated servers        | -                                       | -                                                          |
+| `/servers`              | POST   | Creates a new server             | `{"name":"server1","ip":"192.168.0.1"}` | `{ "id": 1, "name":"server1", "ip":"192.168.0.1", ... }`   |
+| `/servers/<id>`         | GET    | Returns a specific server        | -                                       | `{ "id": 1, "name":"server1", "ip":"192.168.0.1", ... }`   |
+| `/servers/<id>`         | PUT    | Updates a server                 | `{"name":"new_name"}`                   | `{ "id": 1, "name":"new_name", "ip":"192.168.0.1", ... }`  |
+| `/servers/<id>`         | DELETE | Deletes a server                 | -                                       | `{ "message": "Server 1 deleted successfully" }`           |
+| `/servers/<id>/metrics` | GET    | Returns metrics for a server     | -                                       | `{ "cpu": 50, "memory": 2048, "state": "running", ... }`   |
+| `/simulated/<id>`       | DELETE | Deletes a simulated server       | -                                       | `{ "message": "Simulated server 1 deleted successfully" }` |
+| `/lifecycle`            | GET    | Returns current lifecycle states |                                         |                                                            |
 
 
-### Endpoints ###
-Endpoint - Method - Description
-
-/ -     GET     -Home, inserts a request log
-
-/servers -     GET     -Returns simulated servers
-
-/servers -     POST    -Creates a new server
-
-/servers/<id> - GET    -Returns a specific server
-
-/servers/<id> - PUT    -Updates a server
-
-/servers/<id> - DELETE -Deletes a server
-
-/servers/<id>/metrics - GET -Returns metrics for a server
-
-/simulated/<id> - DELETE -Deletes a simulated server
-
-/lifecycle - GET -Returns current lifecycle states of all servers
-
-/health -     GET     -API and DB status
-
-/metrics -     GET     - Prometheus metrics (CPU, memory, state, requests, latency)
+## Prometheus Metrics
+| Metric                        | Description                                   |
+| ----------------------------- | --------------------------------------------- |
+| `requests_total`              | Total number of requests                      |
+| `requests_by_endpoint`        | Requests per endpoint                         |
+| `histogram_quantile(0.95, …)` | Latency p95 by endpoint                       |
+| `server_cpu_usage`            | CPU usage per server                          |
+| `server_memory_usage`         | Memory usage per server                       |
+| `server_state`                | Server state (0=FAILED, 1=RUNNING, 2=BOOTING) |
 
 
-### Prometheus Metrics ###
-
-Total requests: requests_total
-
-Requests by endpoint: requests_by_endpoint
-
-Latency p95 by endpoint: histogram_quantile(0.95, sum(rate(http_request_latency_seconds_bucket[5m])) by (le, endpoint))
-
-CPU per server: server_cpu_usage
-
-Memory per server: server_memory_usage
-
-Server state: server_state (0=FAILED,1=RUNNING,2=BOOTING)
-
-
-### Drafana Dashboards ###
-
+Grafana Dashboards
 Recommended panels:
 
 Total requests (Stat / Time series)
@@ -191,8 +182,7 @@ CPU per server (Gauge / Time series)
 
 Server state (Gauge)
 
-
-### Database ###
+Database
 Main tables
 
 servers: CPU, memory, state.
@@ -206,34 +196,35 @@ Example queries
 -- Show content
 SELECT * FROM servers;
 SELECT * FROM requests_log;
-
-### CI/CD ###
-
+CI/CD
 GitHub Actions configured to:
 
 Lint and test Python code
 
 Build Docker image
 
-Push to DockerHub
+Push to DockerHub (optional)
 
-Automatic deploy to EC2
+Automatic deploy to EC2 (optional)
 
-### Automated Testing ###
+Automated Testing
+Framework: pytest
 
-Unit and integration tests implemented using pytest.
-
-To run tests:
+Run tests:
 pytest
+Coverage includes:
 
-Test coverage includes:
+Server creation, update, and deletion
 
-- Server creation, update, and deletion
-- Metrics accuracy
-- Lifecycle state changes
-- API health
+Metrics accuracy
+
+Lifecycle state changes
+
+API health
 
 Test files:
-- test_servers.py
-- test_basic.py
+
+test_servers.py
+
+test_basic.py
 
